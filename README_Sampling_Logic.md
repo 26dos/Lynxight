@@ -45,12 +45,6 @@ running [`booster-http nodes`](https://boost.filecoin.io/http-retrieval)
 
 Piece retrieval is by default enabled so instead of assuming the deal proposal has the correct RootCID set in the label,
 we will use the `pieceCID` field of the deal proposal and make piece retrieval.
-We will first query the multiaddr of the storage provider to get the HTTP endpoint that serves HTTP retrieval and make a
-piece retrieval for only first MiB of the piece.
-
-### HTTP V2
-
-As part of the new HTTP retrieval push, we are proposing below changes to the HTTP retrieval testing (not implemented):
 
 1. Connect to libp2p multiaddr of the provider that's published on the chain
 2. Get HTTP multiaddr using /fil/retrieval/transport/1.0.0 protocol - The SP needs to handle this protocol and return
