@@ -1,3 +1,4 @@
+
 # 🛰️ Filecoin Retrieval DDO Collector
 
 ## 🔍 Project Overview
@@ -46,7 +47,7 @@ lapi, closer, err := client.NewFullNodeRPC(ctx, "ws://127.0.0.1:1234/rpc/v0", ap
 ch, _ := lapi.ChainNotify(ctx)
 ```
 
-### Capture DDO lifecycle events:
+### Capture and persist full Deal object:
 
 ```go
 for notif := range ch {
@@ -54,7 +55,12 @@ for notif := range ch {
     if ev.Type == api.HintDealActivated {
       log.Printf("[DDO] Activated: DealID=%d, RootCID=%s, Epoch=%d",
         ev.Deal.DealID, ev.Deal.Root, notif.Val.Height())
-      // Save to MongoDB
+      collection.InsertOne(ctx, bson.M{
+        "event": "Activated",
+        "epoch_height": notif.Val.Height(),
+        "created_at": time.Now(),
+        "deal": ev.Deal,  // Store full deal object
+      })
     }
   }
 }
@@ -64,11 +70,10 @@ for notif := range ch {
 
 ```go
 type DealEvent struct {
-  DealID    uint64    `bson:"deal_id"`
-  Root      string    `bson:"root_cid"`
-  Event     string    `bson:"event"`        // e.g., "Activated"
-  Timestamp int64     `bson:"epoch_height"`
-  CreatedAt time.Time `bson:"created_at"`
+  Event     string         `bson:"event"`        // e.g., "Activated"
+  Timestamp int64          `bson:"epoch_height"`
+  CreatedAt time.Time      `bson:"created_at"`
+  Deal      api.MarketDeal `bson:"deal"`         // Store full Deal object
 }
 ```
 
@@ -77,11 +82,10 @@ type DealEvent struct {
 ```go
 collection := mongoClient.Database("ddo").Collection("events")
 _, err := collection.InsertOne(ctx, DealEvent{
-  DealID:    ev.Deal.DealID,
-  Root:      ev.Deal.Root.String(),
   Event:     "Activated",
   Timestamp: notif.Val.Height(),
   CreatedAt: time.Now(),
+  Deal:      ev.Deal,
 })
 ```
 
@@ -91,16 +95,16 @@ _, err := collection.InsertOne(ctx, DealEvent{
 |--------------------------|-------------|
 | ✅ Real-time event stream | No need for daily dumps |
 | ✅ Precise deal tracking  | Detect only sealed+activated data |
+| ✅ Stores full Deal object | All relevant fields persisted |
 | ✅ Supports resumption    | Events can be persisted and reprocessed |
 | ✅ Easy integration       | Embeddable in retrieval/indexing systems |
 
 ## 🧪 Environment Dependencies
 
-- Lotus FullNode (recommended v1.23+)
+- Lotus FullNode (recommended v1.31+)
 - Go 1.20+
 - MongoDB 6.0+
 - `go.mongodb.org/mongo-driver` for database access
-
 
 ## 📦 Grant Objectives
 
